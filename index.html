@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Login</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-firestore.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .login-container {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            text-align: center;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Student Login</h2>
+        <input type="text" id="admissionNumber" placeholder="Admission Number">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="loginStudent()">Login</button>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        // Firebase configuration
+       
+        const firebaseConfig = {
+                apiKey: "AIzaSyAxRQIC8Ypclc1Xg742zpdDgrghP1VkDWg",
+                authDomain: "school-admin-489e6.firebaseapp.com",
+                projectId: "school-admin-489e6",
+                storageBucket: "school-admin-489e6.appspot.com",
+                messagingSenderId: "549677402125",
+                appId: "1:549677402125:web:3fbada8a196dee7cdf2d44",
+                measurementId: "G-FFHTZXKS9W"
+            };
+                  
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        async function loginStudent() {
+            const admissionNumber = document.getElementById("admissionNumber").value;
+            const password = document.getElementById("password").value;
+            const message = document.getElementById("message");
+            
+            db.collection("students").doc(admissionNumber).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (password === data.password) { // Plain text password check
+                            message.style.color = "green";
+                            message.textContent = "Login Successful!";
+                            
+                            // Redirect to dashboard with admission number as parameter
+                            window.location.href = `dashboard.html?admissionNumber=${admissionNumber}`;
+                        } else {
+                            message.style.color = "red";
+                            message.textContent = "Invalid Password!";
+                        }
+                    } else {
+                        message.style.color = "red";
+                        message.textContent = "Admission Number not found!";
+                    }
+                })
+                .catch(error => {
+                    message.style.color = "red";
+                    message.textContent = "Error logging in!";
+                    console.error("Error: ", error);
+                });
+        }
+    </script>
+</body>
+</html>

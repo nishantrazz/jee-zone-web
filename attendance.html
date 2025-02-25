@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    
+    <!-- Firebase Config -->
+    <script src="firebase-config.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            padding: 10px;
+        }
+        .dashboard-container {
+            background: white;
+            padding: 15px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+        img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+        }
+        #calendar {
+            margin-top: 10px;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <h3>Student Dashboard</h3>
+        <img id="studentImage" src="default.jpg" alt="Student Image">
+        <p><strong>Admission No:</strong> <span id="admissionNumber"></span></p>
+        <h4>Attendance</h4>
+        <div id="calendar"></div>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        function waitForFirebase(callback) {
+            const checkFirebase = setInterval(() => {
+                if (window.db) {
+                    clearInterval(checkFirebase);
+                    callback();
+                }
+            }, 100);
+        }
+
+        function getAdmissionNumber() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get("admissionNumber");
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const calendarEl = document.getElementById("calendar");
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: "dayGridMonth",
+                height: 300,
+            });
+            calendar.render();
+
+            waitForFirebase(async function() {
+                const admissionNumber = getAdmissionNumber();
+                if (!admissionNumber) {
+                    alert("Invalid access!");
+                    window.location.href = "index.html";
+                    return;
+                }
+                document.getElementById("admissionNumber").textContent = admissionNumber;
+
+                try {
+                    const attendanceSnapshot = await db.collection("attendance").get();
+                    const events = [];
+                    
+                    for (const doc of attendanceSnapshot.docs) {
+                        const attendanceDoc = await db.collection("attendance")
+                            .doc(doc.id)
+                            .collection("markattendance")
+                            .doc(admissionNumber)
+                            .get();
+
+                        if (attendanceDoc.exists) {
+                            events.push({
+                                title: attendanceDoc.data().isPresent ? "P" : "A",
+                                start: doc.id,
+                                color: attendanceDoc.data().isPresent ? "green" : "red"
+                            });
+                        }
+                    }
+                    calendar.addEventSource(events);
+                } catch (error) {
+                    console.error("Error fetching attendance: ", error);
+                }
+            });
+        });
+
+        function logout() {
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

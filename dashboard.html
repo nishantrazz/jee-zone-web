@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+
+    <!-- Firebase Config (This already declares 'db') -->
+    <script src="firebase-config.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .dashboard-container {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            text-align: center;
+        }
+        img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <h2>Welcome to the Student Dashboard</h2>
+        <img id="studentImage" src="default.png" alt="Student Image">
+        <p><strong>Admission Number:</strong> <span id="admissionNumber"></span></p>
+        <p><strong>Name:</strong> <span id="name"></span></p>
+        <p><strong>Email:</strong> <span id="email"></span></p>
+        <p><strong>Class:</strong> <span id="studentClass"></span></p>
+        <p><strong>Roll Number:</strong> <span id="rollNumber"></span></p>
+        <p><strong>Date of Birth:</strong> <span id="dob"></span></p>
+        <p><strong>Mobile Number:</strong> <span id="mobileNumber"></span></p>
+        <p><strong>Father's Name:</strong> <span id="fatherName"></span></p>
+        <p><strong>Father's Mobile Number:</strong> <span id="fatherMobileNumber"></span></p>
+        <p><strong>Mother's Name:</strong> <span id="motherName"></span></p>
+        <p><strong>Address:</strong> <span id="address"></span></p>
+
+        <h3>Attendance</h3>
+        <p><strong>Today Attendance Status:</strong> <span id="attendanceStatus"></span></p>
+
+        <!-- New Button to Redirect to Full Attendance Page -->
+        <button onclick="goToAttendance()">View Full Attendance</button>
+
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        function waitForFirebase(callback) {
+            const checkFirebase = setInterval(() => {
+                if (window.db) {
+                    clearInterval(checkFirebase);
+                    callback();
+                }
+            }, 100); // Check every 100ms
+        }
+    
+        function getAdmissionNumber() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get("admissionNumber");
+        }
+    
+        function fetchStudentDetails(admissionNumber) {
+            waitForFirebase(() => {
+                db.collection("students").doc(admissionNumber).get()
+                    .then((doc) => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            document.getElementById("admissionNumber").textContent = admissionNumber;
+                            document.getElementById("name").textContent = data.name || "N/A";
+                            document.getElementById("email").textContent = data.email || "N/A";
+                            document.getElementById("studentClass").textContent = data.studentClass || "N/A";
+                            document.getElementById("rollNumber").textContent = data.rollNumber || "N/A";
+                            document.getElementById("dob").textContent = data.dob || "N/A";
+                            document.getElementById("mobileNumber").textContent = data.mobileNumber || "N/A";
+                            document.getElementById("fatherName").textContent = data.fatherName || "N/A";
+                            document.getElementById("fatherMobileNumber").textContent = data.fatherMobileNumber || "N/A";
+                            document.getElementById("motherName").textContent = data.motherName || "N/A";
+                            document.getElementById("address").textContent = data.address || "N/A";
+                            document.getElementById("studentImage").src = data.imageUrl || "default.jpg";
+                        } else {
+                            alert("Student record not found!");
+                            window.location.href = "index.html";
+                        }
+                    })
+                    .catch(error => {
+                        console.error("❌ Error fetching student details: ", error);
+                        alert("Error fetching student details!");
+                    });
+            });
+        }
+    
+        function fetchAttendance(admissionNumber) {
+            const today = new Date().toISOString().split("T")[0]; 
+            waitForFirebase(() => {
+                db.collection("attendance").doc(today).collection("markattendance").doc(admissionNumber).get()
+                    .then((doc) => {
+                        document.getElementById("attendanceStatus").textContent = doc.exists ? doc.data().status || "Not Marked" : "Not Marked";
+                    })
+                    .catch(error => {
+                        console.error("❌ Error fetching attendance: ", error);
+                        document.getElementById("attendanceStatus").textContent = "Error fetching data";
+                    });
+            });
+        }
+    
+        // Initialize Student Details and Attendance AFTER Firebase is loaded
+        const admissionNumber = getAdmissionNumber();
+        if (admissionNumber) {
+            waitForFirebase(() => {
+                fetchStudentDetails(admissionNumber);
+                fetchAttendance(admissionNumber);
+            });
+        } else {
+            alert("Invalid access!");
+            window.location.href = "index.html";
+        }
+    
+        function logout() {
+            window.location.href = "index.html";
+        }
+
+        function goToAttendance() {
+            const admissionNumber = getAdmissionNumber();
+            if (admissionNumber) {
+                window.location.href = `attendance.html?admissionNumber=${admissionNumber}`;
+            } else {
+                alert("Invalid admission number!");
+            }
+        }
+    </script>
+</body>
+</html>
