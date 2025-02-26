@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-firestore.js"></script>
+    <script src="firebase.js"></script> <!-- Load Firebase Config -->
+
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; }
+        .container { width: 80%; margin: auto; background: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 5px; }
+        button { margin: 5px; padding: 10px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px; }
+        .section { display: none; }
+        .student-card { border: 1px solid #ddd; padding: 10px; margin: 10px; border-radius: 5px; background-color: #f9f9f9; text-align: left; }
+
+
+        .teacher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 20px;
+    padding: 20px;
+}
+
+.teacher-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.teacher-card img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 10px;
+}
+
+.teacher-card h3 {
+    margin: 5px 0;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.teacher-card p {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.student-grid, .teacher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.student-card, .teacher-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.student-card img, .teacher-card img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 10px;
+}
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Admin Dashboard</h2>
+
+        <button onclick="showSection('profile')">Profile</button>
+        <button onclick="showSection('students')">All Students</button>
+        <button onclick="showSection('teachers')">All Teachers</button>
+        <button onclick="logout()">Logout</button>
+
+        <!-- Profile Section -->
+        <div id="profileSection" class="section">
+            <h3>Admin Profile</h3>
+            <p><strong>Email:</strong> <span id="adminEmail">Loading...</span></p>
+        </div>
+
+        <!-- Student List Section -->
+        <div id="studentsSection" class="section">
+            <h3>All Students</h3>
+            <div id="studentList">Loading...</div>
+        </div>
+
+        <!-- Teacher List Section -->
+        <div id="teachersSection" class="section">
+            <h3>All Teachers</h3>
+            <ul id="teacherList">Loading...</ul>
+        </div>
+    </div>
+
+    <script>
+        function waitForFirebase(callback) {
+            if (window.db) {
+                callback();
+            } else {
+                console.warn("Waiting for Firebase...");
+                setTimeout(() => waitForFirebase(callback), 1000);
+            }
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+            document.getElementById(section + 'Section').style.display = 'block';
+
+            if (section === 'profile') loadProfile();
+            else if (section === 'students') loadStudents();
+            else if (section === 'teachers') loadTeachers();
+        }
+
+        function loadProfile() {
+            waitForFirebase(() => {
+                const email = localStorage.getItem("adminEmail");
+                if (!email) {
+                    document.getElementById("adminEmail").textContent = "Not logged in!";
+                    return;
+                }
+
+                db.collection("admin").doc(email).get()
+                    .then((doc) => {
+                        if (doc.exists) {
+                            document.getElementById("adminEmail").textContent = `Email: ${doc.data().email}`;
+                        } else {
+                            document.getElementById("adminEmail").textContent = "Admin profile not found!";
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching admin data:", error);
+                        document.getElementById("adminEmail").textContent = "Error loading profile.";
+                    });
+            });
+        }
+
+        function loadStudents() {
+    waitForFirebase(() => {
+        db.collection("students").get()
+            .then((querySnapshot) => {
+                let studentListHTML = `<div class="student-grid">`; // Start Grid Container
+
+                querySnapshot.forEach((doc) => {
+                    const student = doc.data();
+                    const profileImage = student.imageUrl ? student.imageUrl : "default.png"; // Default if missing
+
+                    studentListHTML += `
+                        <div class="student-card">
+                            <img src="${profileImage}" alt="Student Photo" onerror="this.onerror=null; this.src='default.png';">
+                            <h3>${student.name || "N/A"}</h3>
+                            <p><strong>Admission No:</strong> ${doc.id}</p>
+                            <p><strong>Email:</strong> ${student.email || "N/A"}</p>
+                            <p><strong>Class:</strong> ${student.studentClass || "N/A"}</p>
+                            <p><strong>Roll No:</strong> ${student.rollNumber || "N/A"}</p>
+                            <p><strong>Phone:</strong> ${student.mobileNumber || "N/A"}</p>
+                            <p><strong>Father:</strong> ${student.fatherName || "N/A"}</p>
+                        </div>`;
+                });
+
+                studentListHTML += `</div>`; // End Grid Container
+                document.getElementById("studentList").innerHTML = studentListHTML || "<p>No students found.</p>";
+            })
+            .catch(error => {
+                console.error("Error loading students:", error);
+                document.getElementById("studentList").innerHTML = "<p>Error loading student data.</p>";
+            });
+    });
+}
+
+
+        function loadTeachers() {
+    waitForFirebase(() => {
+        db.collection("teacher").get()
+            .then((querySnapshot) => {
+                let teacherListHTML = `<div class="teacher-grid">`; // Start Grid Container
+
+                querySnapshot.forEach((doc) => {
+                    const teacherEmail = doc.id;  // Get teacher email (document ID)
+                    const teacher = doc.data();
+                    const profileImage = teacher.photoUrl ? teacher.photoUrl : "default.jpg"; // Use default if missing
+
+                    teacherListHTML += `
+                        <div class="teacher-card">
+                            <img src="${profileImage}" alt="Teacher Photo" onerror="this.onerror=null; this.src='default.png';">
+                            <h3>${teacher.name || "N/A"}</h3>
+                            <p><strong>Email:</strong> ${teacherEmail}</p>
+                            <p><strong>Phone:</strong> ${teacher.phone || "N/A"}</p>
+                            <p><strong>Qualification:</strong> ${teacher.qualification || "N/A"}</p>
+                            <p><strong>Subject:</strong> ${teacher.subjectteacher || "N/A"}</p>
+                        </div>`;
+                });
+
+                teacherListHTML += `</div>`; // End Grid Container
+                document.getElementById("teacherList").innerHTML = teacherListHTML || "<p>No teachers found.</p>";
+            })
+            .catch(error => {
+                console.error("Error loading teachers:", error);
+                document.getElementById("teacherList").innerHTML = "<p>Error loading teacher data.</p>";
+            });
+    });
+}
+
+
+
+
+        function logout() {
+            localStorage.removeItem("adminEmail");
+            window.location.href = "login.html";
+        }
+
+        // Ensure Firebase is ready before calling functions
+        waitForFirebase(loadProfile);
+    </script>
+</body>
+</html>

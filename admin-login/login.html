@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-firestore.js"></script>
+    <script src="firebase.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .login-container {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            text-align: center;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body onload="initializeFirebase()">
+    <div class="login-container">
+        <h2>Admin Login</h2>
+        <input type="email" id="adminEmail" placeholder="Email">
+        <input type="password" id="adminPassword" placeholder="Password">
+        <button onclick="loginAdmin()">Login</button>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        function loginAdmin() {
+            const email = document.getElementById("adminEmail").value;
+            const password = document.getElementById("adminPassword").value;
+            const message = document.getElementById("message");
+
+            if (!email || !password) {
+                message.style.color = "red";
+                message.textContent = "Please enter email and password.";
+                return;
+            }
+
+            db.collection("admin").doc(email).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (password === data.password) { 
+                            message.style.color = "green";
+                            message.textContent = "Login Successful!";
+
+                            // Store email in localStorage for dashboard access
+                            localStorage.setItem("adminEmail", email);
+
+                            // Redirect to admin dashboard
+                            window.location.href = "admin_dashboard.html";
+                        } else {
+                            message.style.color = "red";
+                            message.textContent = "Invalid Password!";
+                        }
+                    } else {
+                        message.style.color = "red";
+                        message.textContent = "Admin account not found!";
+                    }
+                })
+                .catch(error => {
+                    message.style.color = "red";
+                    message.textContent = "Error logging in!";
+                    console.error("Error: ", error);
+                });
+        }
+    </script>
+</body>
+</html>
